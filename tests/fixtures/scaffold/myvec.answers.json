@@ -1,0 +1,91 @@
+{
+  "project": "MyVector (myvec)",
+  "description": "Local hybrid (vector + full-text) code search and two-level memory for Claude Code.",
+  "stack": "Python 3.12 (typer, SQLite, sqlite-vec, FTS5) and a vanilla-JS UI",
+  "test_cmd": "uv run pytest -q",
+  "ui": {
+    "url": "http://127.0.0.1:7878",
+    "check": "Light and dark theme, narrow width; Claude in Chrome extension only."
+  },
+  "machines": "Mac, devbox",
+  "status_style": "emoji",
+  "first_group": {
+    "id": "E0",
+    "slug": "workflow",
+    "title": "Development process"
+  },
+  "slots": {
+    "coder_keywords": "implement, feature, command, refactor, fix, CLI, daemon, UI",
+    "coder_rules": [
+      "- Stack: Python 3.12, uv, typer, SQLite + sqlite-vec + FTS5; UI: vanilla JS in `src/myvec/ui` (no build step, the Project-B design system: Geist, oklch tokens; the interface language is Ukrainian, numbers `uk-UA`). Follow the conventions of the neighboring code.",
+      "- Secrets: do not weaken `filters.py`, the `•••` masking, the dropping of PEM keys and tokens. New file types go into the index only with a secrets check.",
+      "- Do not change the model and the search parameters \"by eye\", only through `bench/`.",
+      "- Tests do not touch the real `~/MyVector` etc.; do not use `monkeypatch.undo()` (it removes the `MYVEC_HOME` patch).",
+      "- Updating the installation: `uv tool install --reinstall --python 3.12 .`; do not hardcode Mac or devbox paths in code and scripts."
+    ],
+    "protected_paths": "`~/MyVector`, `~/.claude`, LaunchAgents/systemd, global git config",
+    "tickets_check_cmd": "uv run python scripts/tickets.py check",
+    "tickets_index_cmd": "uv run python scripts/tickets.py index",
+    "tester_cases": "Edge cases, errors, secrets (masking, dropping), `MYVEC_HOME` in a tmp dir (the autouse fixture `env` in `tests/conftest.py`). Not `monkeypatch.undo()`: restore a specific attribute via `monkeypatch.setattr(..., real)`.",
+    "tester_isolation": "Nothing that hits the real `~/MyVector`, Ollama or the network: fake embedders and servers, as in the existing tests. Time-dependent tests use a fixed time.",
+    "tester_run": "`myvec measure --ticket <ID> --agent tester --label full -- uv run pytest -q`. On devbox the node tests need a PATH with nvm: `PATH=$HOME/.nvm/versions/node/v22.23.4/bin:$PATH myvec measure --ticket <ID> --agent tester --label full -- uv run pytest -q`. In a worktree without a fresh `myvec` (no `measure`) use `uv run myvec measure ...`. A rerun of the flaky `test_real_watchdog_smoke` also goes through the wrapper with `--label rerun`.",
+    "planner_read": "README.md, CLAUDE.md, `bench/REPORT.md` (if it touches search or the model)",
+    "planner_risks": "the DB schema and the index migration (the DB is derived, `myvec rebuild`; the vault is the source of truth), secrets and filters (do not weaken `filters.py`), ranking and the model (change only through `bench/`), noise in the index, two platforms (launchd/systemd), compatibility with indexes already deployed on two machines, test isolation (`MYVEC_HOME`)",
+    "reviewer_checks": [
+      "- Correctness: logic, boundaries, races (daemon + CLI + watcher, `sync.lock`), idempotence, error handling, SQL (parameters, transactions), consistency of the DB and the vault.",
+      "- Security: secrets in the index, logs and responses, bypassing `filters.py`, path traversal and symlinks in the indexer, injections in FTS5/SQL queries, the web API on :7878 (binding to 127.0.0.1, XSS/CSRF in the UI), file permissions.",
+      "- Ranking and search: changes to RRF, scope weights or the model without a new `bench/` run = Important.",
+      "- Two platforms: launchd/systemd, paths, `install.sh` (idempotence, macOS and Linux).",
+      "- Test quality: the name matches the check, no empty or always-green asserts, tests do not touch the real `~/MyVector`, no `monkeypatch.undo()`.",
+      "- Fit to the ticket: nothing extra and nothing missing; real data and secrets did not reach the repository."
+    ],
+    "qa_description": "Live verification of the installed myvec: reinstall, daemon, live search, UI on :7878.",
+    "qa_keywords": "QA, live check, browser, screenshot, UI, layout, live search",
+    "qa_steps": [
+      "1. Take \"Перевірка наживо\" from the ticket. Install and restart the daemon only if the orchestrator allowed it: `uv tool install --reinstall --python 3.12 .`, `myvec install-daemon`.",
+      "2. Live search in 2-3 projects: a natural-language query (uk/ru) and an identifier; `--scope all` for cross-project. Judge relevance and the absence of secrets in the results.",
+      "3. UI: http://127.0.0.1:7878, light and dark theme, narrow width. On every screenshot look at the whole design: text sticking out or clipped, no gaps between neighboring elements, duplicated labels, overlaps, extra line breaks, number and time formats for Ukrainian (`uk-UA`: \"3 671\", 24-hour time; `3,671` and `12:00 AM` are defects).",
+      "4. Describe an obvious layout defect in steps and with a screenshot description; the coder fixes it.",
+      "5. The real `~/MyVector` is read-only, except where the ticket directly requires otherwise. Do not quote secrets that appeared in the results by accident: report the fact and the place.",
+      "6. Into the ticket's `## Log`: the list of scenarios, passed/failed, defects, the `measure:` line of every test run as is.",
+      "7. Any test run in the live check (pytest, node, npm) goes through `myvec measure --ticket <ID> --agent qa -- ...` (rules: `skill/myvector/tickets.md`, \"Test runs\"; in a worktree without a fresh `myvec` use `uv run myvec measure`). The `measure:` line goes into the Log (item 6) and into the status. The real `~/MyVector` then gets a line in the run journal (`test_runs`): this is an expected record, not a violation of \"read-only\". Do not use the wrapper for `true` or experiments."
+    ],
+    "docs_targets": "README.md (commands, schema, architecture: the full description), CLAUDE.md (only non-obvious things and pitfalls, briefly), `skill/myvector/SKILL.md` (if the commands or the skill behavior changed), `bench/REPORT.md` (only if a benchmark was run), `docs/decisions.md` (ADRs)",
+    "debugger_repro": "a test, a `myvec` command, daemon logs (launchd, `journalctl --user -u myvec`), read-only",
+    "debugger_checks": "check the DB schema and the lock state (`sync already running` is the daemon, do not kill processes)",
+    "debugger_data": "; do not change the data of the real `~/MyVector`",
+    "live_check_trigger": "When the ticket touches the installed tool, the daemon, search or the UI:",
+    "live_check_steps": [
+      "1. `uv tool install --reinstall --python 3.12 .` (or `./install.sh`), then `myvec install-daemon` (restart). Without `--reinstall` uv installs the cached old build.",
+      "2. Live search in 2-3 projects: a natural-language query (uk/ru) and an identifier; `--scope all`.",
+      "3. UI: http://127.0.0.1:7878 - only the Claude in Chrome extension (`mcp__claude-in-chrome__*`), do not use the chrome-devtools MCP. Light and dark theme, narrow width (`resize_window`).",
+      "4. After changes to `filters.py`/secrets - scan the DB for PEM/AKIA/tokens. `sync already running` - wait, do not kill the daemon's processes.",
+      "",
+      "The real `~/MyVector` is read-only unless the ticket requires otherwise."
+    ],
+    "install_rule": "Reinstalling `myvec` on the machines and restarting the daemon happen only on the user's explicit command. Agents do not touch the real `~/MyVector`, `~/.claude`, LaunchAgents/systemd.",
+    "workflow_docs": "README/CLAUDE.md/`docs/lessons.md`/`docs/decisions.md`/`bench/REPORT.md` (if search or the model was touched)",
+    "parallel_note": "- Tests are isolated through `MYVEC_HOME`, but the daemon and the real index are one: do not run parallel qa runs.",
+    "canon_path": "skill/myvector/tickets.md",
+    "canon_ref": "[skill/myvector/tickets.md](../../skill/myvector/tickets.md) (ADR-006)",
+    "status_note": ", ADR-004",
+    "private_data": "real contents of `~/MyVector`/vault",
+    "token_note": ", ADR-013",
+    "docs_language": "Ukrainian",
+    "pitfalls_section": "«Пастки»",
+    "reviewer_security_note": " (secrets, injections, paths)",
+    "reviewer_keyword": "secrets",
+    "tester_kind": "pytest tests",
+    "tester_keywords": "tests, pytest, regression, flaky, coverage",
+    "tester_not_live": "live checks in the browser",
+    "tester_test_word": "pytest test",
+    "tester_neighbors": "`tests/test_*.py`",
+    "tester_summary": "pytest summary",
+    "sec_goal": "За один захід",
+    "sec_context": "Контекст",
+    "sec_plan": "Рішення — кроки",
+    "sec_files": "Володіння файлами",
+    "sec_live": "Перевірка наживо",
+    "orchestrator_name": "оркестратор"
+  }
+}

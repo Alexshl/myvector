@@ -1,0 +1,9 @@
+#!/bin/sh
+# Embedding server for myvec (embed_api = "openai"): llama.cpp llama-server with embeddinggemma-300M on CPU.
+# OpenAI-compatible /v1/embeddings on 127.0.0.1:11435. Install: cp to ~/bin/embed-server, chmod +x.
+# -c 8192 -np 4 -> 2048 tokens per slot (the model's context); longer chunks are cut by myvec (head kept, as Ollama does).
+# --pooling mean matches Ollama's embeddinggemma (checked: cosine 0.999 vs stored Ollama vectors, bench in README).
+LLAMA_SERVER="${LLAMA_SERVER:-$HOME/apps/llama.cpp/build/bin/llama-server}"
+EMBED_MODEL="${EMBED_MODEL:-$HOME/models/embed/embeddinggemma-300M-Q8_0.gguf}"
+exec "$LLAMA_SERVER" -m "$EMBED_MODEL" --embeddings --pooling mean -ngl 0 \
+  -c 8192 -b 4096 -ub 4096 -np 4 --host 127.0.0.1 --port "${EMBED_PORT:-11435}"

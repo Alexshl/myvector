@@ -1,0 +1,15 @@
+# systemd user unit for the myvec query-only embedding server (config `query_url = "http://127.0.0.1:11436"`).
+#   cp contrib/llama-embed/embed-query-server ~/bin/ && cp contrib/llama-embed/embed-query-server.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now embed-query-server
+# Independent of embed-server (indexing); the model file must be the same one. Linger: sudo loginctl enable-linger $USER
+[Unit]
+Description=llama.cpp query-only embedding server for myvec (embeddinggemma, :11436)
+Before=myvec.service
+
+[Service]
+ExecStart=%h/bin/embed-query-server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+*.egg-info/
+.worktrees/
+docs/todo/inbox/
+cloud/node_modules/
+cloud/.wrangler/
+cloud/.dev.vars

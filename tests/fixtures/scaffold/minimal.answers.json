@@ -1,0 +1,6 @@
+{
+  "project": "demo",
+  "description": "A demo app.",
+  "stack": "Python 3.12 + FastAPI",
+  "test_cmd": "uv run pytest -q"
+}

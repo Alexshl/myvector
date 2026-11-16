@@ -1,0 +1,13 @@
+# Local only (E4-02). Deploy, account_id, routes and real database_id - E4-05.
+# ACCESS_DEV_BYPASS is deliberately NOT declared here: enable it only through
+# the gitignored cloud/.dev.vars or `--var ACCESS_DEV_BYPASS:1` (npm run dev).
+name = "myvec-pm"
+main = "src/index.ts"
+compatibility_date = "2026-08-15"
+send_metrics = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "myvec-pm"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

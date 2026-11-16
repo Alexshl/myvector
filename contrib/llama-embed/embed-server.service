@@ -1,0 +1,15 @@
+# systemd user unit for the myvec embedding server.
+#   cp contrib/llama-embed/embed-server ~/bin/ && cp contrib/llama-embed/embed-server.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now embed-server
+# Survives logout/reboot with linger: sudo loginctl enable-linger $USER
+[Unit]
+Description=llama.cpp embedding server for myvec (embeddinggemma, :11435)
+Before=myvec.service
+
+[Service]
+ExecStart=%h/bin/embed-server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
